@@ -20,9 +20,11 @@ jobs:
           NEW_VER="${{ github.event.client_payload.version }}"
           echo "Syncing Deckard to version $NEW_VER"
           
-          # manifest.toml 내 [tools.deckard] 섹션의 version 수정
-          # 단순 sed 대신 조금 더 정교하게 섹션 찾아서 수정
-          sed -i "/\[tools.deckard\]/,/version =/ s/version = ".*"/version = \"$NEW_VER\"/" manifest.toml
+          # 1. manifest.toml 내 [tools.deckard] 섹션의 version 수정
+          sed -i "/\[tools.deckard\]/,/version =/ s/version = \".*\"/version = \"$NEW_VER\"/" manifest.toml
+          
+          # 2. url 필드 내의 태그 버전 수정 (vX.Y.Z 패턴 대응)
+          sed -i "/\[tools.deckard\]/,/url =/ s|tags/v.*.zip|tags/v${NEW_VER}.zip|" manifest.toml
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"

@@ -137,12 +137,11 @@ if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ] && [ -n "$ZIP_URL" ]; then
     
     # 4. 버전 기록
     echo "$REQUIRED_VERSION" > version.txt
-    
-    # 임시 폴더 정리
     rm -rf "$TEMP_DIR"
-    log "업데이트 완료."
+    log "업데이트 완료"
 fi
 
 # 5. 실행
-# exec로 프로세스 교체 (PID 유지)
+# 버전 정보를 환경변수로 주입 (Tag-Driven 연동)
+export DECKARD_VERSION="$REQUIRED_VERSION"
 exec python3 mcp/server.py
