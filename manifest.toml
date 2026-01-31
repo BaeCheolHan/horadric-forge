@@ -2,11 +2,11 @@
 # Defines versions and sources for Rules and Tools
 
 [rules]
-version = "v1.0.0"
+version = "v1.0.1"
 # Default URL (can be overridden by RULES_ZIP_URL env var)
 url = "https://github.com/BaeCheolHan/horadric-forge-rules/archive/refs/tags/v1.0.0.zip"
 
 [tools.deckard]
-version = "v1.0.0"
+version = "v1.0.1"
 # Default URL (can be overridden by TOOLS_ZIP_URL env var)
 url = "https://github.com/BaeCheolHan/horadric-deckard/archive/refs/tags/v1.0.0.zip"
