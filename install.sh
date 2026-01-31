@@ -124,14 +124,36 @@ echo_info "unzip 확인 완료."
 # -----------------------------------------------------------------------------
 # 2. Resolve Manifest
 # -----------------------------------------------------------------------------
+# Robust TOML parser using Python Regex (works on Python 3.8+)
 get_toml() {
-    local key=$1
-    if python3 -c "import tomllib" 2>/dev/null; then
-        python3 -c "import sys, tomllib; print(tomllib.load(open('$MANIFEST_FILE', 'rb'))$key)" 2>/dev/null
-    else
-        local term=$(echo "$key" | awk -F"'" '{print $NF}')
-        grep "$term" "$MANIFEST_FILE" | head -1 | cut -d'"' -f2
-    fi
+    local query=$1
+    # query format: "['section']['key']"
+    # Extract section and key
+    local section=$(echo "$query" | cut -d"'" -f2)
+    local key=$(echo "$query" | cut -d"'" -f4)
+    
+    # Python script to parse TOML section and key
+    python3 -c "
+import sys, re
+try:
+    with open('$MANIFEST_FILE', 'r') as f:
+        content = f.read()
+    
+    # Find section block: [section] ... (until next [ or EOF)
+    # Escape brackets for regex
+    section_pat = r'\[' + re.escape('$section') + r'\](.*?)(?=\n\[|\Z)'
+    m_sec = re.search(section_pat, content, re.DOTALL)
+    if m_sec:
+        block = m_sec.group(1)
+        # Find key = \"value\" in the block
+        # Supports basic string values
+        key_pat = re.escape('$key') + r'\s*=\s*\"(.*?)\"'
+        m_key = re.search(key_pat, block)
+        if m_key:
+            print(m_key.group(1))
+except Exception:
+    pass
+"
 }
 
 if [[ -z "$RULES_SOURCE" ]]; then
