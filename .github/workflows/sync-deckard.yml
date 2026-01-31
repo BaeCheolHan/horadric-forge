@@ -1,0 +1,32 @@
+name: Sync Deckard Version
+
+on:
+  repository_dispatch:
+    types: [deckard-update]
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Forge
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Manifest
+        run: |
+          NEW_VER="${{ github.event.client_payload.version }}"
+          echo "Syncing Deckard to version $NEW_VER"
+          
+          # manifest.toml 내 [tools.deckard] 섹션의 version 수정
+          # 단순 sed 대신 조금 더 정교하게 섹션 찾아서 수정
+          sed -i "/\[tools.deckard\]/,/version =/ s/version = ".*"/version = \"$NEW_VER\"/" manifest.toml
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add manifest.toml
+          git commit -m "Auto-sync: Update deckard to $NEW_VER" || echo "No changes to commit"
+          git push origin main
