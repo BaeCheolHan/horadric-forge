@@ -124,33 +124,33 @@ echo_info "unzip 확인 완료."
 # -----------------------------------------------------------------------------
 # 2. Resolve Manifest
 # -----------------------------------------------------------------------------
-# Robust TOML parser using Python Regex (works on Python 3.8+)
 get_toml() {
     local query=$1
-    # query format: "['section']['key']"
-    # Extract section and key
     local section=$(echo "$query" | cut -d"'" -f2)
     local key=$(echo "$query" | cut -d"'" -f4)
     
-    # Python script to parse TOML section and key
     python3 -c "
-import sys, re
+import sys
 try:
-    with open('$MANIFEST_FILE', 'r') as f:
-        content = f.read()
+    with open('$MANIFEST_FILE') as f:
+        lines = f.readlines()
     
-    # Find section block: [section] ... (until next [ or EOF)
-    # Escape brackets for regex
-    section_pat = r'\[' + re.escape('$section') + r'\](.*?)(?=\n\[|\Z)'
-    m_sec = re.search(section_pat, content, re.DOTALL)
-    if m_sec:
-        block = m_sec.group(1)
-        # Find key = \"value\" in the block
-        # Supports basic string values
-        key_pat = re.escape('$key') + r'\s*=\s*\"(.*?)\"'
-        m_key = re.search(key_pat, block)
-        if m_key:
-            print(m_key.group(1))
+    target_sec = '$section'
+    target_key = '$key'
+    in_sec = False
+    
+    for line in lines:
+        line = line.strip()
+        # Section Header
+        if line.startswith('[') and line.endswith(']'):
+            curr = line[1:-1]
+            in_sec = (curr == target_sec)
+        # Key-Value pair
+        elif in_sec and '=' in line and not line.startswith('#'):
+            k, v = line.split('=', 1)
+            if k.strip() == target_key:
+                print(v.strip().strip('\"').strip(\"'\"))
+                sys.exit(0)
 except Exception:
     pass
 "
