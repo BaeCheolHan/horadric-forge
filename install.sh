@@ -1,5 +1,5 @@
 #!/bin/bash
-# Horadric Forge Installer (v1.0.1)
+# Horadric Forge Installer (v1.0.2)
 # Installs Codex Rules and sets up Deckard (Local Search) Bootstrapper.
 # Supports standalone execution via curl.
 
@@ -54,7 +54,7 @@ if [[ -z "$WORKSPACE_ROOT" ]]; then
     WORKSPACE_ROOT="$(pwd)"
 fi
 
-echo_info "Horadric Forge Installer (v1.0.1)"
+echo_info "Horadric Forge Installer (v1.0.2)"
 echo_info "Workspace: $WORKSPACE_ROOT"
 
 # -----------------------------------------------------------------------------
