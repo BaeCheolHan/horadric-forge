@@ -1,0 +1,36 @@
+name: Release Forge Installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Version Match
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          # Extract version from install.sh header: # Horadric Forge Installer (v1.0.1)
+          FILE_VERSION=$(head -5 install.sh | grep 'Installer (v' | cut -d'v' -f2 | cut -d')' -f1)
+          
+          echo "Tag Version: $TAG_VERSION"
+          echo "File Version: $FILE_VERSION"
+          
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "::error::Version mismatch! Tag is $TAG_VERSION but install.sh says $FILE_VERSION"
+            exit 1
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
