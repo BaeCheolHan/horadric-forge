@@ -144,4 +144,4 @@ fi
 # 5. 실행
 # 버전 정보를 환경변수로 주입 (Tag-Driven 연동)
 export DECKARD_VERSION="$REQUIRED_VERSION"
-exec python3 mcp/server.py
+exec python3 mcp/proxy.py
