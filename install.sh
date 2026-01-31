@@ -1,6 +1,7 @@
 #!/bin/bash
 # Horadric Forge Installer (v2.6.1)
 # Installs Codex Rules and sets up Deckard (Local Search) Bootstrapper.
+# Supports standalone execution via curl.
 
 set -euo pipefail
 
@@ -16,19 +17,26 @@ echo_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 echo_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 echo_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
+# Configuration
+REPO_OWNER="BaeCheolHan"
+FORGE_REPO="horadric-forge"
+BRANCH="main"
+BASE_URL="https://raw.githubusercontent.com/$REPO_OWNER/$FORGE_REPO/$BRANCH"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST_FILE="$SCRIPT_DIR/manifest.toml"
-TEMPLATE_FILE="$SCRIPT_DIR/templates/bootstrap.sh"
 WORKSPACE_ROOT=""
 FORCE_INSTALL="no"
 
-# Sources
+# Resources (Will be downloaded if missing)
+MANIFEST_FILE="$SCRIPT_DIR/manifest.toml"
+TEMPLATE_FILE="$SCRIPT_DIR/templates/bootstrap.sh"
+
+# Parse Args
 RULES_SOURCE=""
 TOOLS_SOURCE=""
 IS_LOCAL_RULES="no"
 IS_LOCAL_TOOLS="no"
 
-# Parse Args
 for arg in "$@"; do
     case "$arg" in
         --force) FORCE_INSTALL="yes" ;;
@@ -50,15 +58,36 @@ echo_info "Horadric Forge Installer (v2.6.1)"
 echo_info "Workspace: $WORKSPACE_ROOT"
 
 # -----------------------------------------------------------------------------
-# 1. Pre-flight Check (Python)
+# 0. Resource Preparation (Remote Fetch)
+# -----------------------------------------------------------------------------
+# If running standalone, fetch manifest and template
+prepare_resource() {
+    local file_path=$1
+    local remote_path=$2
+    if [[ ! -f "$file_path" ]]; then
+        echo_step "Fetching remote resource: $remote_path..."
+        local dir=$(dirname "$file_path")
+        mkdir -p "$dir"
+        curl -sL -o "$file_path" "$BASE_URL/$remote_path" || {
+            echo_error "Failed to download $remote_path"
+            exit 1
+        }
+    fi
+}
+
+prepare_resource "$MANIFEST_FILE" "manifest.toml"
+prepare_resource "$TEMPLATE_FILE" "templates/bootstrap.sh"
+
+# -----------------------------------------------------------------------------
+# 1. Pre-flight Check (Python & Unzip)
 # -----------------------------------------------------------------------------
 echo_step "시스템 환경 점검 중..."
 
+# Check Python 3
 if ! command -v python3 &>/dev/null; then
     echo_error "Python 3가 감지되지 않았습니다."
     echo "Deckard(Local Search) 도구는 Python 3.8 이상이 필수입니다."
     
-    # Non-interactive check (CI environment etc.)
     if [[ ! -t 0 ]]; then
         echo_error "비대화형 모드: 설치를 중단합니다."
         exit 1
@@ -75,7 +104,7 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
-# Check Version (3.8+)
+# Check Python Version (3.8+)
 if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)"; then
     VER=$(python3 --version)
     echo_error "Python 버전이 너무 낮습니다: $VER"
@@ -84,15 +113,10 @@ if ! python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)"; 
 fi
 echo_info "Python 환경 적합."
 
-# Check for unzip
+# Check Unzip
 if ! command -v unzip &>/dev/null; then
     echo_error "unzip 명령어를 찾을 수 없습니다."
     echo "Deckard 도구 설치를 위해 unzip이 필요합니다."
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "Mac OS: 'brew install unzip' (기본 설치되어 있어야 함)"
-    else
-        echo "Linux: 'sudo apt install unzip' 등을 실행하세요."
-    fi
     exit 1
 fi
 echo_info "unzip 확인 완료."
@@ -100,16 +124,11 @@ echo_info "unzip 확인 완료."
 # -----------------------------------------------------------------------------
 # 2. Resolve Manifest
 # -----------------------------------------------------------------------------
-# Python-based TOML parsing for robustness
 get_toml() {
     local key=$1
-    # Try using python tomllib (3.11+) or basic regex fallback
     if python3 -c "import tomllib" 2>/dev/null; then
         python3 -c "import sys, tomllib; print(tomllib.load(open('$MANIFEST_FILE', 'rb'))$key)" 2>/dev/null
     else
-        # Fallback: grep (Fragile but works for simple files)
-        # Convert ['tools']['deckard']['version'] to grep logic
-        # This is strictly fallback.
         local term=$(echo "$key" | awk -F"'" '{print $NF}')
         grep "$term" "$MANIFEST_FILE" | head -1 | cut -d'"' -f2
     fi
@@ -131,7 +150,7 @@ if [[ -z "$TOOLS_SOURCE" ]]; then
     echo_info "Deckard Version: $TOOL_VERSION (Remote)"
 else
     TOOL_VERSION="local-dev"
-    TOOL_URL="" # Empty URL signals local mode to bootstrapper
+    TOOL_URL="" 
     echo_info "Deckard Source: Local ($TOOLS_SOURCE)"
 fi
 
@@ -156,7 +175,6 @@ else
     cp -R "$ZIP_ROOT/." "$RULES_DIR/"
 fi
 
-# Install to workspace
 mkdir -p "$WORKSPACE_ROOT/.codex"
 mkdir -p "$WORKSPACE_ROOT/.gemini"
 mkdir -p "$WORKSPACE_ROOT/docs"
@@ -177,7 +195,6 @@ echo_step "Deckard Bootstrapper 설정 중..."
 DECKARD_DIR="$WORKSPACE_ROOT/.codex/tools/deckard"
 LEGACY_DIR="$WORKSPACE_ROOT/.codex/tools/local-search"
 
-# Cleanup Legacy
 if [[ -d "$LEGACY_DIR" ]]; then
     echo_warn "구버전(local-search) 발견. 삭제합니다."
     rm -rf "$LEGACY_DIR"
@@ -185,11 +202,10 @@ fi
 
 mkdir -p "$DECKARD_DIR"
 
-# Generate bootstrap.sh from template
+# Generate bootstrap.sh
 sed "s|__REQUIRED_VERSION__|$TOOL_VERSION|g; s|__ZIP_URL__|$TOOL_URL|g" "$TEMPLATE_FILE" > "$DECKARD_DIR/bootstrap.sh"
 chmod +x "$DECKARD_DIR/bootstrap.sh"
 
-# If Local Mode, copy files physically NOW
 if [[ "$IS_LOCAL_TOOLS" == "yes" ]]; then
     echo_info "Local Mode: 파일 직접 복사 중..."
     cp -R "$TOOLS_SOURCE/." "$DECKARD_DIR/"
@@ -203,13 +219,9 @@ echo_info "Bootstrapper 생성 완료."
 # -----------------------------------------------------------------------------
 echo_step "CLI 설정 주입 중..."
 
-# A. Gemini CLI (.gemini/settings.json)
 GEMINI_SETTINGS="$WORKSPACE_ROOT/.gemini/settings.json"
-if [[ ! -f "$GEMINI_SETTINGS" ]]; then
-    echo "{}" > "$GEMINI_SETTINGS"
-fi
+if [[ ! -f "$GEMINI_SETTINGS" ]]; then echo "{}" > "$GEMINI_SETTINGS"; fi
 
-# Use python to safely update JSON
 python3 -c "
 import sys, json, os
 try:
@@ -224,10 +236,7 @@ try:
         'command': '/bin/bash',
         'args': ['.codex/tools/deckard/bootstrap.sh']
     }
-    
-    # Remove legacy if exists
-    if 'local-search' in data['mcpServers']:
-        del data['mcpServers']['local-search']
+    if 'local-search' in data['mcpServers']: del data['mcpServers']['local-search']
 
     with open(path, 'w') as f: json.dump(data, f, indent=2)
     print('Gemini settings updated.')
@@ -236,7 +245,6 @@ except Exception as e:
     sys.exit(1)
 "
 
-# B. Codex CLI (.codex/config.toml)
 CODEX_CONFIG="$WORKSPACE_ROOT/.codex/config.toml"
 MCP_BLOCK=$(cat << 'EOF'
 
@@ -246,16 +254,12 @@ args = [".codex/tools/deckard/bootstrap.sh"]
 EOF
 )
 
-if [[ ! -f "$CODEX_CONFIG" ]]; then
-    echo "# Codex Config" > "$CODEX_CONFIG"
-fi
-
+if [[ ! -f "$CODEX_CONFIG" ]]; then echo "# Codex Config" > "$CODEX_CONFIG"; fi
 if ! grep -q "mcp_servers.deckard" "$CODEX_CONFIG"; then
     echo "$MCP_BLOCK" >> "$CODEX_CONFIG"
     echo_info "Codex config updated."
 fi
 
-# C. AGENTS.md (Codex Entry)
 if [[ ! -f "$WORKSPACE_ROOT/AGENTS.md" ]]; then
     cat > "$WORKSPACE_ROOT/AGENTS.md" << 'EOF'
 # Codex Rules
@@ -270,9 +274,6 @@ EOF
     echo_info "AGENTS.md created."
 fi
 
-# -----------------------------------------------------------------------------
-# Done
-# -----------------------------------------------------------------------------
 echo_info "설치 완료!"
 echo ""
 echo "다음 단계:"
