@@ -7,6 +7,6 @@ version = "v1.0.1"
 url = "https://github.com/BaeCheolHan/horadric-forge-rules/archive/refs/tags/v1.0.0.zip"
 
 [tools.deckard]
-version = "1.1.10"
+version = "1.1.11"
 # Default URL (can be overridden by TOOLS_ZIP_URL env var)
-url = "https://github.com/BaeCheolHan/horadric-deckard/archive/refs/tags/v1.1.10.zip"
+url = "https://github.com/BaeCheolHan/horadric-deckard/archive/refs/tags/v1.1.11.zip"
