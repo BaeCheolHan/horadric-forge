@@ -42,6 +42,11 @@ for arg in "$@"; do
         --force) FORCE_INSTALL="yes" ;;
         --rules-path=*) RULES_SOURCE="${arg#*=}"; IS_LOCAL_RULES="yes" ;;
         --tools-path=*) TOOLS_SOURCE="${arg#*=}"; IS_LOCAL_TOOLS="yes" ;;
+        --global) 
+            echo "Deckard Global Install Mode..."
+            curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/horadric-deckard/main/install.py | python3
+            exit 0
+            ;;
         *)
             if [[ -z "$WORKSPACE_ROOT" && ! "$arg" == --* ]]; then
                 WORKSPACE_ROOT="$arg"
