@@ -1,6 +1,6 @@
 #!/bin/bash
 # Horadric Forge Installer (v1.0.2)
-# Installs Codex Rules and sets up Deckard (Local Search) Bootstrapper.
+# Installs Codex Rules and configures Deckard (Local Search) MCP.
 # Supports standalone execution via curl.
 
 set -euo pipefail
@@ -42,7 +42,7 @@ for arg in "$@"; do
         --force) FORCE_INSTALL="yes" ;;
         --rules-path=*) RULES_SOURCE="${arg#*=}"; IS_LOCAL_RULES="yes" ;;
         --tools-path=*) TOOLS_SOURCE="${arg#*=}"; IS_LOCAL_TOOLS="yes" ;;
-        --global) 
+        --global)
             echo "Deckard Global Install Mode..."
             curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/horadric-deckard/main/install.py | python3
             exit 0
@@ -172,8 +172,8 @@ fi
 TOOL_VERSION=""
 TOOL_URL=""
 if [[ -z "$TOOLS_SOURCE" ]]; then
-    TOOL_VERSION=$(get_toml "['tools.deckard']['version']")
-    TOOL_URL=$(get_toml "['tools.deckard']['url']")
+TOOL_VERSION=$(get_toml "['tools.deckard']['version']")
+TOOL_URL=$(get_toml "['tools.deckard']['url']")
     echo_info "Deckard Version: $TOOL_VERSION (Remote)"
 else
     TOOL_VERSION="local-dev"
@@ -215,31 +215,41 @@ if [[ -d "$RULES_DIR/docs/_shared" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Install Deckard (Bootstrapper)
+# 4. Install Deckard (Global) + Cleanup Legacy
 # -----------------------------------------------------------------------------
-echo_step "Deckard Bootstrapper 설정 중..."
+echo_step "Deckard 설치/정리 중..."
 
-DECKARD_DIR="$WORKSPACE_ROOT/.codex/tools/deckard"
 LEGACY_DIR="$WORKSPACE_ROOT/.codex/tools/local-search"
+OLD_DECKARD_DIR="$WORKSPACE_ROOT/.codex/tools/deckard"
 
 if [[ -d "$LEGACY_DIR" ]]; then
     echo_warn "구버전(local-search) 발견. 삭제합니다."
     rm -rf "$LEGACY_DIR"
 fi
-
-mkdir -p "$DECKARD_DIR"
-
-# Generate bootstrap.sh
-sed "s|__REQUIRED_VERSION__|$TOOL_VERSION|g; s|__ZIP_URL__|$TOOL_URL|g" "$TEMPLATE_FILE" > "$DECKARD_DIR/bootstrap.sh"
-chmod +x "$DECKARD_DIR/bootstrap.sh"
-
-if [[ "$IS_LOCAL_TOOLS" == "yes" ]]; then
-    echo_info "Local Mode: 파일 직접 복사 중..."
-    cp -R "$TOOLS_SOURCE/." "$DECKARD_DIR/"
-    echo "$TOOL_VERSION" > "$DECKARD_DIR/version.txt"
+if [[ -d "$OLD_DECKARD_DIR" ]]; then
+    echo_warn "구버전(.codex/tools/deckard) 발견. 삭제합니다."
+    rm -rf "$OLD_DECKARD_DIR"
 fi
 
-echo_info "Bootstrapper 생성 완료."
+DECKARD_CMD=""
+if [[ "$IS_LOCAL_TOOLS" == "yes" ]]; then
+    DECKARD_CMD="$TOOLS_SOURCE/bootstrap.sh"
+    if [[ ! -x "$DECKARD_CMD" ]]; then
+        echo_error "Local tools path에 bootstrap.sh가 없습니다: $DECKARD_CMD"
+        exit 1
+    fi
+    echo_info "Local Mode: Deckard 실행 경로 = $DECKARD_CMD"
+else
+    echo_info "Deckard 글로벌 설치 진행..."
+    curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/horadric-deckard/main/install.py | python3
+    DECKARD_CMD="$HOME/.local/share/horadric-deckard/bootstrap.sh"
+    if [[ ! -x "$DECKARD_CMD" ]]; then
+        echo_error "Deckard 설치가 완료되지 않았습니다: $DECKARD_CMD"
+        exit 1
+    fi
+fi
+
+echo_info "Deckard 설치/정리 완료."
 
 # -----------------------------------------------------------------------------
 # 5. Configure CLIs (Multi-CLI)
@@ -260,8 +270,9 @@ try:
     if 'mcpServers' not in data: data['mcpServers'] = {}
     
     data['mcpServers']['deckard'] = {
-        'command': '/bin/bash',
-        'args': ['.codex/tools/deckard/bootstrap.sh']
+        'command': '$DECKARD_CMD',
+        'args': ['--workspace-root', '$WORKSPACE_ROOT'],
+        'env': {'DECKARD_WORKSPACE_ROOT': '$WORKSPACE_ROOT'}
     }
     if 'local-search' in data['mcpServers']: del data['mcpServers']['local-search']
 
@@ -276,8 +287,9 @@ CODEX_CONFIG="$WORKSPACE_ROOT/.codex/config.toml"
 MCP_BLOCK=$(cat << 'EOF'
 
 [mcp_servers.deckard]
-command = "/bin/bash"
-args = [".codex/tools/deckard/bootstrap.sh"]
+command = "$DECKARD_CMD"
+args = ["--workspace-root", "$WORKSPACE_ROOT"]
+env = { DECKARD_WORKSPACE_ROOT = "$WORKSPACE_ROOT" }
 EOF
 )
 
@@ -305,5 +317,5 @@ echo_info "설치 완료!"
 echo ""
 echo "다음 단계:"
 echo "  1. 'gemini' 또는 'codex' CLI를 실행하세요."
-echo "  2. 실행 시 'deckard' 도구가 자동으로 다운로드/설치됩니다."
-echo "  3. 로그 확인: .codex/tools/deckard/logs/bootstrap.log"
+echo "  2. 실행 시 'deckard' 도구가 자동으로 연결됩니다."
+echo "  3. 로그 확인: ~/.local/share/deckard/logs/deckard.log"
