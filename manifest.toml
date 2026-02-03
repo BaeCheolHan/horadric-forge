@@ -6,7 +6,7 @@ version = "v1.0.1"
 # Default URL (can be overridden by RULES_ZIP_URL env var)
 url = "https://github.com/BaeCheolHan/horadric-forge-rules/archive/refs/tags/v1.0.0.zip"
 
-[tools.deckard]
-version = "1.2.9"
+[tools.sari]
+version = "0.0.1"
 # Default URL (can be overridden by TOOLS_ZIP_URL env var)
-url = "https://github.com/BaeCheolHan/horadric-deckard/archive/refs/tags/v1.2.9.zip"
+url = "https://github.com/BaeCheolHan/sari/archive/refs/tags/v0.0.1.zip"

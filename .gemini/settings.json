@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/settings/settings-schema.json",
+  "context": {
+    "fileName": [
+      "GEMINI.md"
+    ]
+  },
+  "models": {
+    "gemini-1.5-flash": {
+      "preview": true
+    },
+    "gemini-1.5-pro": {
+      "preview": true
+    },
+    "gemini-2.0-flash-exp": {
+      "preview": true
+    }
+  },
+  "mcpServers": {
+    "deckard": {
+      "command": "/Users/baecheolhan/.local/share/horadric-deckard/bootstrap.sh",
+      "args": [
+        "--workspace-root",
+        "/Users/baecheolhan/Documents/repositories/horadric-forge"
+      ],
+      "env": {
+        "DECKARD_WORKSPACE_ROOT": "/Users/baecheolhan/Documents/repositories/horadric-forge"
+      }
+    }
+  }
+}

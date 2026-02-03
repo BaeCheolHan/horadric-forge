@@ -88,8 +88,8 @@ if [[ -d "$WORKSPACE_ROOT/docs" ]]; then
     fi
 fi
 
-# Deckard 전역 캐시/인덱스 삭제
-CACHE_DECKARD="$HOME/.local/share/deckard"
+# Sari 전역 캐시/인덱스 삭제
+CACHE_DECKARD="$HOME/.local/share/sari"
 CACHE_LEGACY="$HOME/.cache/local-search"
 
 if [[ -d "$CACHE_DECKARD" ]]; then

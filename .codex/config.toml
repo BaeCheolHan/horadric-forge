@@ -1,0 +1,6 @@
+# Codex Config
+
+[mcp_servers.deckard]
+command = "$DECKARD_CMD"
+args = ["--workspace-root", "$WORKSPACE_ROOT"]
+env = { DECKARD_WORKSPACE_ROOT = "$WORKSPACE_ROOT" }

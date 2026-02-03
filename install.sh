@@ -1,6 +1,6 @@
 #!/bin/bash
 # Horadric Forge Installer (v1.0.2)
-# Installs Codex Rules and configures Deckard (Local Search) MCP.
+# Installs Codex Rules and configures Sari (Local Search) MCP.
 # Supports standalone execution via curl.
 
 set -euo pipefail
@@ -43,8 +43,8 @@ for arg in "$@"; do
         --rules-path=*) RULES_SOURCE="${arg#*=}"; IS_LOCAL_RULES="yes" ;;
         --tools-path=*) TOOLS_SOURCE="${arg#*=}"; IS_LOCAL_TOOLS="yes" ;;
         --global)
-            echo "Deckard Global Install Mode..."
-            curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/horadric-deckard/main/install.py | python3
+            echo "Sari Global Install Mode..."
+            curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/sari/main/install.py | python3
             exit 0
             ;;
         *)
@@ -91,7 +91,7 @@ echo_step "시스템 환경 점검 중..."
 # Check Python 3
 if ! command -v python3 &>/dev/null; then
     echo_error "Python 3가 감지되지 않았습니다."
-    echo "Deckard(Local Search) 도구는 Python 3.8 이상이 필수입니다."
+    echo "Sari(Local Search) 도구는 Python 3.8 이상이 필수입니다."
     
     if [[ ! -t 0 ]]; then
         echo_error "비대화형 모드: 설치를 중단합니다."
@@ -121,7 +121,7 @@ echo_info "Python 환경 적합."
 # Check Unzip
 if ! command -v unzip &>/dev/null; then
     echo_error "unzip 명령어를 찾을 수 없습니다."
-    echo "Deckard 도구 설치를 위해 unzip이 필요합니다."
+    echo "Sari 도구 설치를 위해 unzip이 필요합니다."
     exit 1
 fi
 echo_info "unzip 확인 완료."
@@ -172,13 +172,13 @@ fi
 TOOL_VERSION=""
 TOOL_URL=""
 if [[ -z "$TOOLS_SOURCE" ]]; then
-TOOL_VERSION=$(get_toml "['tools.deckard']['version']")
-TOOL_URL=$(get_toml "['tools.deckard']['url']")
-    echo_info "Deckard Version: $TOOL_VERSION (Remote)"
+TOOL_VERSION=$(get_toml "['tools.sari']['version']")
+TOOL_URL=$(get_toml "['tools.sari']['url']")
+    echo_info "Sari Version: $TOOL_VERSION (Remote)"
 else
     TOOL_VERSION="local-dev"
     TOOL_URL="" 
-    echo_info "Deckard Source: Local ($TOOLS_SOURCE)"
+    echo_info "Sari Source: Local ($TOOLS_SOURCE)"
 fi
 
 # -----------------------------------------------------------------------------
@@ -215,19 +215,19 @@ if [[ -d "$RULES_DIR/docs/_shared" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Install Deckard (Global) + Cleanup Legacy
+# 4. Install Sari (Global) + Cleanup Legacy
 # -----------------------------------------------------------------------------
-echo_step "Deckard 설치/정리 중..."
+echo_step "Sari 설치/정리 중..."
 
 LEGACY_DIR="$WORKSPACE_ROOT/.codex/tools/local-search"
-OLD_DECKARD_DIR="$WORKSPACE_ROOT/.codex/tools/deckard"
+OLD_DECKARD_DIR="$WORKSPACE_ROOT/.codex/tools/sari"
 
 if [[ -d "$LEGACY_DIR" ]]; then
     echo_warn "구버전(local-search) 발견. 삭제합니다."
     rm -rf "$LEGACY_DIR"
 fi
 if [[ -d "$OLD_DECKARD_DIR" ]]; then
-    echo_warn "구버전(.codex/tools/deckard) 발견. 삭제합니다."
+    echo_warn "구버전(.codex/tools/sari) 발견. 삭제합니다."
     rm -rf "$OLD_DECKARD_DIR"
 fi
 
@@ -238,18 +238,18 @@ if [[ "$IS_LOCAL_TOOLS" == "yes" ]]; then
         echo_error "Local tools path에 bootstrap.sh가 없습니다: $DECKARD_CMD"
         exit 1
     fi
-    echo_info "Local Mode: Deckard 실행 경로 = $DECKARD_CMD"
+    echo_info "Local Mode: Sari 실행 경로 = $DECKARD_CMD"
 else
-    echo_info "Deckard 글로벌 설치 진행..."
-    curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/horadric-deckard/main/install.py | python3
-    DECKARD_CMD="$HOME/.local/share/horadric-deckard/bootstrap.sh"
+    echo_info "Sari 글로벌 설치 진행..."
+    curl -fsSL https://raw.githubusercontent.com/BaeCheolHan/sari/main/install.py | python3
+    DECKARD_CMD="$HOME/.local/share/sari/bootstrap.sh"
     if [[ ! -x "$DECKARD_CMD" ]]; then
-        echo_error "Deckard 설치가 완료되지 않았습니다: $DECKARD_CMD"
+        echo_error "Sari 설치가 완료되지 않았습니다: $DECKARD_CMD"
         exit 1
     fi
 fi
 
-echo_info "Deckard 설치/정리 완료."
+echo_info "Sari 설치/정리 완료."
 
 # -----------------------------------------------------------------------------
 # 5. Configure CLIs (Multi-CLI)
@@ -269,7 +269,7 @@ try:
     
     if 'mcpServers' not in data: data['mcpServers'] = {}
     
-    data['mcpServers']['deckard'] = {
+    data['mcpServers']['sari'] = {
         'command': '$DECKARD_CMD',
         'args': ['--workspace-root', '$WORKSPACE_ROOT'],
         'env': {'DECKARD_WORKSPACE_ROOT': '$WORKSPACE_ROOT'}
@@ -286,7 +286,7 @@ except Exception as e:
 CODEX_CONFIG="$WORKSPACE_ROOT/.codex/config.toml"
 MCP_BLOCK=$(cat << 'EOF'
 
-[mcp_servers.deckard]
+[mcp_servers.sari]
 command = "$DECKARD_CMD"
 args = ["--workspace-root", "$WORKSPACE_ROOT"]
 env = { DECKARD_WORKSPACE_ROOT = "$WORKSPACE_ROOT" }
@@ -294,7 +294,7 @@ EOF
 )
 
 if [[ ! -f "$CODEX_CONFIG" ]]; then echo "# Codex Config" > "$CODEX_CONFIG"; fi
-if ! grep -q "mcp_servers.deckard" "$CODEX_CONFIG"; then
+if ! grep -q "mcp_servers.sari" "$CODEX_CONFIG"; then
     echo "$MCP_BLOCK" >> "$CODEX_CONFIG"
     echo_info "Codex config updated."
 fi
@@ -317,5 +317,5 @@ echo_info "설치 완료!"
 echo ""
 echo "다음 단계:"
 echo "  1. 'gemini' 또는 'codex' CLI를 실행하세요."
-echo "  2. 실행 시 'deckard' 도구가 자동으로 연결됩니다."
-echo "  3. 로그 확인: ~/.local/share/deckard/logs/deckard.log"
+echo "  2. 실행 시 'sari' 도구가 자동으로 연결됩니다."
+echo "  3. 로그 확인: ~/.local/share/sari/logs/sari.log"

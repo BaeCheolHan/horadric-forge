@@ -14,7 +14,7 @@ Contains the "Soul" of the AI Agent (Rules, Scenarios, Skills).
 - `docs/_shared/` (Operational docs)
 - `GEMINI.md`
 
-### `horadric-deckard`
+### `sari`
 Contains the "Eyes" of the AI Agent (Local Search Tool).
 - `app/`, `mcp/` (Python source code)
 - `config/` (Default configs)
@@ -53,6 +53,6 @@ To test changes locally without pushing to Git:
 ```bash
 ./horadric-forge/install.sh ./test-workspace \
   --rules-path=../horadric-forge-rules \
-  --tools-path=../horadric-deckard \
+  --tools-path=../sari \
   --force
 ```
