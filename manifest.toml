@@ -7,6 +7,6 @@ version = "v1.0.1"
 url = "https://github.com/BaeCheolHan/horadric-forge-rules/archive/refs/tags/v1.0.0.zip"
 
 [tools.sari]
-version = "0.3.36"
+version = "0.3.37"
 # Default URL (can be overridden by TOOLS_ZIP_URL env var)
-url = "https://github.com/BaeCheolHan/sari/archive/refs/tags/v0.3.36.zip"
+url = "https://github.com/BaeCheolHan/sari/archive/refs/tags/v0.3.37.zip"
